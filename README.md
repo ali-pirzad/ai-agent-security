@@ -70,6 +70,69 @@ Each phase is independent infrastructure-as-code, validated before the next is l
 | **4 · API Management** | [`infra/terraform/04-apim`](infra/terraform/04-apim) | VNet-injected APIM gateway + policies | The single governed door — auth, validation, rate-limit, logging |
 | **5 · Foundry** | [`infra/terraform/05-foundry`](infra/terraform/05-foundry) | Foundry account/project/model + private Cosmos/Search/Storage | Network-isolated agent, same perimeter |
 
+## How the phases fit together
+
+Solid arrows = **build-time dependency** (`terraform_remote_state`); dotted arrows = **runtime** data/telemetry flow. Full one-pager: [`docs/phases-overview.md`](docs/phases-overview.md).
+
+```mermaid
+flowchart TB
+    subgraph P1["Phase 1 — Foundation (network perimeter)"]
+        VNET["VNet 192.168.0.0/16"]
+        SNAPIM["snet-apim"]
+        SNFUNC["snet-function<br/>deny-internet egress"]
+        SNPE["snet-private-endpoint"]
+        SNAGENT["snet-agent"]
+        DNS["7 private DNS zones"]
+        VNET --- SNAPIM & SNFUNC & SNPE & SNAGENT & DNS
+    end
+
+    subgraph P2["Phase 2 — Observability"]
+        LAW["Log Analytics<br/>log-aas-cus"]
+        AI["App Insights<br/>appi-aas-cus (workspace-based)"]
+        AI --- LAW
+    end
+
+    subgraph P3["Phase 3 — Private backend"]
+        FUNC["Function API<br/>public OFF · managed identity"]
+        STOR3["Storage (blob)"]
+        FUNC --- STOR3
+    end
+
+    subgraph P4["Phase 4 — API Management"]
+        APIM["APIM gateway (VNet-injected)<br/>key · rate-limit · validation · logging"]
+        SUB["subscription: aas-demo-client"]
+        APIM --- SUB
+    end
+
+    subgraph P5["Phase 5 — AI Foundry"]
+        FACC["Foundry account + model<br/>firewalled (admin IP + PE)"]
+        PROJ["project + capability host"]
+        COS["Cosmos (threads)"]
+        SRCH["AI Search (vectors)"]
+        STOR5["Storage (files)"]
+        FACC --- PROJ
+        PROJ --- COS & SRCH & STOR5
+    end
+
+    P1 -->|remote state: RG, subnets, DNS| P2
+    P1 -->|subnets + DNS| P3
+    P2 -->|workspace / App Insights IDs| P3
+    P1 -->|apim subnet| P4
+    P3 -->|backend URL| P4
+    P2 -->|logger + diagnostic| P4
+    P1 -->|agent + PE subnets + DNS| P5
+    P2 -->|App Insights conn string| P5
+    P4 -->|gateway URL for OpenAPI tool| P5
+
+    APIM -.->|private endpoint + key| FUNC
+    APIM -.->|gateway logs / traces| AI
+    FUNC -.->|requests / failures| AI
+    FACC -.->|agent traces| AI
+
+    classDef sink fill:#E7F0FD,stroke:#0F6CBD,color:#000;
+    class LAW,AI sink;
+```
+
 ## Proof, not promises
 
 Same results on **both** agent platforms:
@@ -90,6 +153,7 @@ Same results on **both** agent platforms:
 | [`infra/terraform/`](infra/terraform) | The five deployment phases |
 | [`src/customer-api/`](src/customer-api) | Mock customer/risk API (Azure Functions) |
 | [`docs/article.md`](docs/article.md) | Full step-by-step write-up (what / why / how it helps) |
+| [`docs/phases-overview.md`](docs/phases-overview.md) | One-pager: all five phases and how they chain |
 | [`docs/phase-1-foundation.md`](docs/phase-1-foundation.md) | Phase 1 diagram with NSG rules |
 | [`docs/architecture.html`](docs/architecture.html) | Interactive architecture + real-world walkthrough |
 | [`docs/build-journal.md`](docs/build-journal.md) | Decision log and gotchas |
