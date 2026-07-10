@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Secure AI Agents on Azure — Architecture</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  padding: 32px 24px 48px;
+}
+.wrap { max-width: 1200px; margin: 0 auto; }
+header h1 { font-size: 1.6rem; margin: 0 0 4px; }
+header p { color: var(--cp-text-muted); margin: 0 0 24px; font-size: 0.95rem; }
+.flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1.4fr;
+  align-items: stretch;
+  gap: 8px;
+}
+@media (max-width: 900px) { .flow { grid-template-columns: 1fr; } .arrow { transform: rotate(90deg); justify-self: center; } }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.zone-label {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--cp-text-soft); font-weight: 600; margin-bottom: 2px;
+}
+.card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+}
+.card h3 { margin: 0 0 6px; font-size: 1.02rem; }
+.card .sub { color: var(--cp-text-muted); font-size: 0.82rem; }
+.card ul { margin: 8px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--cp-text-muted); }
+.card ul li { margin: 2px 0; }
+.accent { border-color: var(--cp-accent); box-shadow: 0 0 0 1px var(--cp-accent-soft), var(--cp-shadow); }
+.tag {
+  display: inline-block; font-size: 0.68rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
+  background: var(--cp-accent-soft); color: var(--cp-accent); border: 1px solid var(--cp-accent);
+}
+.arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 92px; }
+.arrow .line { color: var(--cp-success); font-size: 1.5rem; line-height: 1; }
+.arrow .lbl { font-size: 0.68rem; color: var(--cp-text-soft); text-align: center; margin-top: 2px; }
+.vnet {
+  border: 1.5px dashed var(--cp-border-strong);
+  border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--cp-bg-elevated);
+}
+.vnet .vlabel { font-size: 0.78rem; font-weight: 600; color: var(--cp-text); }
+.vnet .vlabel span { color: var(--cp-text-soft); font-weight: 400; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  flex: 1 1 30%; min-width: 90px; text-align: center;
+  background: var(--cp-surface-soft); border: 1px solid var(--cp-border);
+  border-radius: 10px; padding: 8px 6px; font-size: 0.78rem;
+}
+.chip small { display: block; color: var(--cp-text-soft); font-size: 0.68rem; }
+.ok { color: var(--cp-success); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+.panel { border-radius: 16px; border: 1px solid var(--cp-border); padding: 16px; background: var(--cp-surface); }
+.panel h3 { margin: 0 0 10px; font-size: 1rem; }
+.row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--cp-border); font-size: 0.86rem; }
+.row:last-child { border-bottom: none; }
+.badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.badge.deny { background: color-mix(in srgb, var(--cp-danger) 14%, transparent); color: var(--cp-danger); border: 1px solid var(--cp-danger); }
+.badge.allow { background: color-mix(in srgb, var(--cp-success) 14%, transparent); color: var(--cp-success); border: 1px solid var(--cp-success); }
+.foot { margin-top: 26px; color: var(--cp-text-soft); font-size: 0.78rem; }
+.scenario { background: var(--cp-accent-soft); border: 1px solid var(--cp-accent); border-radius: 12px; padding: 14px 16px; margin-bottom: 22px; font-size: 0.9rem; }
+.scenario b { color: var(--cp-accent); }
+.plain { font-size: 0.75rem; color: var(--cp-text-soft); font-style: italic; margin-top: 8px; }
+.walk { margin-top: 26px; }
+.walk h2 { font-size: 1.15rem; margin: 0 0 4px; }
+.walk .sub2 { color: var(--cp-text-muted); font-size: 0.85rem; margin-bottom: 14px; }
+.ex { display: grid; grid-template-columns: 92px 1fr 240px; gap: 14px; align-items: start; padding: 12px 14px; border: 1px solid var(--cp-border); border-radius: 12px; background: var(--cp-surface); margin-bottom: 8px; }
+.ex .q { font-size: 0.9rem; }
+.ex .q small { display: block; color: var(--cp-text-soft); font-size: 0.75rem; margin-top: 4px; }
+.ex .out { font-size: 0.78rem; color: var(--cp-text-muted); text-align: right; }
+@media (max-width: 720px) { .ex { grid-template-columns: 84px 1fr; } .ex .out { grid-column: 2; text-align: left; } }
+code { font-family: Consolas, "Courier New", Courier, monospace; background: var(--cp-surface-soft); padding: 1px 5px; border-radius: 6px; font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Secure AI Agents on Azure — Zero-Trust Egress Governance</h1>
+    <p>Copilot Studio &amp; Azure AI Foundry agents behind one governed perimeter — APIM + VNet + private endpoints.</p>
+  </header>
+
+  <div class="scenario">
+    <b>Real-world scenario:</b> A bank's support team uses an AI copilot to check a business customer's risk before approving a wire transfer. The copilot must read from the core <em>customer-risk</em> system — but the security team requires it can <b>only</b> reach that one approved API, never the open internet, a public data broker, or the database directly.
+  </div>
+
+  <div class="flow">
+    <!-- Agents -->
+    <div class="col">
+      <div class="zone-label">Agent layer · callers</div>
+      <div class="card">
+        <div class="tag">SaaS</div>
+        <h3>Microsoft Copilot Studio</h3>
+        <div class="sub">Approved connector + DLP allow-list. No generic HTTP.</div>
+        <div class="plain">Real-life: the support rep's chat copilot in Teams.</div>
+      </div>
+      <div class="card">
+        <div class="tag">Azure</div>
+        <h3>Azure AI Foundry Agent</h3>
+        <div class="sub">OpenAPI tool. Runs in the VNet agent subnet.</div>
+        <div class="plain">Real-life: a custom risk-analysis agent your dev team builds.</div>
+      </div>
+    </div>
+
+    <div class="arrow"><div class="line">&#10142;</div><div class="lbl">approved<br/>connector / tool</div></div>
+
+    <!-- APIM -->
+    <div class="col">
+      <div class="zone-label">Governance chokepoint</div>
+      <div class="card accent" style="height:100%">
+        <div class="tag">Single front door</div>
+        <h3>Azure API Management</h3>
+        <div class="sub">Public gateway, VNet-injected.</div>
+        <ul>
+          <li>Subscription key auth</li>
+          <li>Rate-limit 20 / 60s</li>
+          <li>Request validation</li>
+          <li>Logging &rarr; App Insights</li>
+        </ul>
+        <div class="plain">Real-life: the guarded reception desk — checks ID, logs every visit, caps requests.</div>
+      </div>
+    </div>
+
+    <div class="arrow"><div class="line">&#10142;</div><div class="lbl">private endpoint<br/>(key)</div></div>
+
+    <!-- VNet -->
+    <div class="col">
+      <div class="zone-label">Private perimeter</div>
+      <div class="vnet">
+        <div class="vlabel">VNet 192.168.0.0/16 <span>· deny-by-default · no uncontrolled egress</span></div>
+        <div class="card">
+          <h3>Customer API <span class="sub">(Azure Function)</span></h3>
+          <div class="sub"><span class="ok">private endpoint</span> · public access OFF · deny internet egress</div>
+          <div class="plain">Real-life: your core “customer 360” / risk system.</div>
+        </div>
+        <div class="card">
+          <h3>Azure AI Foundry <span class="sub">(firewalled: admin IP + PE)</span></h3>
+          <div class="sub">Foundry account + <code>gpt-5-mini</code> · VNet-injected agent</div>
+          <div class="chips" style="margin-top:10px">
+            <div class="chip">Cosmos DB<small>threads</small></div>
+            <div class="chip">AI Search<small>vectors</small></div>
+            <div class="chip">Storage<small>files</small></div>
+          </div>
+          <div class="sub" style="margin-top:8px">all private · local-auth off · state stays in customer resources</div>
+          <div class="plain">Real-life: the agent's memory &amp; files — kept in your own vault, not a shared cloud.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>Allowed vs. blocked (validated)</h3>
+      <div class="row"><span class="badge allow">200</span><span>Agent calls approved API via APIM (with key)</span></div>
+      <div class="row"><span class="badge deny">401</span><span>Missing / invalid subscription key</span></div>
+      <div class="row"><span class="badge deny">400</span><span>Invalid <code>id</code> — validated at the gateway</span></div>
+      <div class="row"><span class="badge deny">404</span><span>Undefined route / external API — no connector</span></div>
+      <div class="row"><span class="badge deny">403</span><span>Direct-to-backend bypass — private only</span></div>
+      <div class="row"><span class="badge deny">429</span><span>Rate limit exceeded (&gt;20 / 60s)</span></div>
+    </div>
+    <div class="panel">
+      <h3>Why it holds</h3>
+      <div class="row"><span class="badge allow">VNet</span><span>Everything past APIM is private — no public access, deny-internet egress</span></div>
+      <div class="row"><span class="badge allow">APIM</span><span>One governed door; enforces auth, rate-limit, validation, logging</span></div>
+      <div class="row"><span class="badge allow">DLP</span><span>Copilot Studio (SaaS) locked to the approved connector only</span></div>
+      <div class="row"><span class="badge allow">RBAC</span><span>Managed identity + scoped roles — no shared secrets in Foundry</span></div>
+      <div class="row"><span class="badge allow">Data</span><span>Foundry agent state stays in customer-owned Cosmos / Search / Storage</span></div>
+    </div>
+  </div>
+
+  <div class="walk">
+    <h2>Real-world walkthrough — what the agent can &amp; can't do</h2>
+    <div class="sub2">Same governed path on both Copilot Studio and Foundry. Example business customer “Acme Corp” = id <code>ACME-42</code>.</div>
+
+    <div class="ex">
+      <span class="badge allow">Allowed</span>
+      <div class="q">“Pull up Acme Corp — what's their risk tier and recent activity?”<small>Agent → approved connector → APIM → private risk API</small></div>
+      <div class="out">200 · returns risk tier “low” + recent transactions</div>
+    </div>
+    <div class="ex">
+      <span class="badge allow">Allowed</span>
+      <div class="q">“Summarize customer BETA-7's last few transactions.”<small>Same governed call, different record</small></div>
+      <div class="out">200 · transactions returned, logged in App Insights</div>
+    </div>
+    <div class="ex">
+      <span class="badge deny">Blocked</span>
+      <div class="q">“Also enrich this from a public data-broker website.”<small>Tries to reach an external URL</small></div>
+      <div class="out">No connector for it · DLP blocks — the agent simply can't</div>
+    </div>
+    <div class="ex">
+      <span class="badge deny">Blocked</span>
+      <div class="q">“Just query the customer database directly and skip the gateway.”<small>Attempt to bypass APIM to the backend</small></div>
+      <div class="out">403 · backend is private-only, unreachable outside the VNet</div>
+    </div>
+    <div class="ex">
+      <span class="badge deny">Blocked</span>
+      <div class="q">“Look up customer <code>'; DROP TABLE…</code>” (malformed / injection id)<small>Bad input reaches the gateway first</small></div>
+      <div class="out">400 · rejected by request validation, never hits the backend</div>
+    </div>
+    <div class="ex">
+      <span class="badge deny">Blocked</span>
+      <div class="q">“Loop over 10,000 customers and pull them all right now.”<small>Abusive burst of calls</small></div>
+      <div class="out">429 · rate limit (20 / 60s) throttles the flood</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Observability: APIM &amp; agent telemetry flow to <strong>App Insights + Log Analytics</strong>.
+    See <code>docs/build-journal.md</code> and <code>docs/agent-setup-guide.md</code>. Append <code>?clawpilotTheme=dark</code> to the URL to preview dark mode.
+  </div>
+</div>
+</body>
+</html>

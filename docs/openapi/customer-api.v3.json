@@ -1,0 +1,128 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AAS Customer API",
+    "description": "Governed customer-data API for the AI Agents Security demo. Fronted by Azure API Management; the private Function backend returns a mock customer record (customerId, riskScore, riskTier, transactions). Used as the single approved tool/connector for both the Azure AI Foundry agent and the Copilot Studio agent.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://apim-aas-cus-egtyrm.azure-api.net",
+      "description": "APIM gateway (the only endpoint the agent may call)"
+    }
+  ],
+  "security": [
+    {
+      "apimSubscriptionKey": []
+    }
+  ],
+  "paths": {
+    "/api/customer/{id}": {
+      "get": {
+        "operationId": "getCustomerById",
+        "summary": "Get a customer record by id",
+        "description": "Returns a mock customer record including a risk score and recent transactions. Requires an APIM subscription key.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Customer identifier (1-64 alphanumeric or hyphen characters).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{1,64}$",
+              "example": "ACME-42"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The customer record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid customer id (failed gateway validation)."
+          },
+          "401": {
+            "description": "Missing or invalid subscription key."
+          },
+          "429": {
+            "description": "Rate limit exceeded (20 calls / 60s)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apimSubscriptionKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Ocp-Apim-Subscription-Key",
+        "description": "Azure API Management subscription key."
+      }
+    },
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "ACME-42"
+          },
+          "riskScore": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "maximum": 99,
+            "example": 37
+          },
+          "riskTier": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "example": "low"
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "tx-ACME-42-1"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "example": 291.37
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "category": {
+            "type": "string",
+            "example": "electronics"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-02-02"
+          }
+        }
+      }
+    }
+  }
+}

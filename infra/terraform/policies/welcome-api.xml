@@ -1,0 +1,21 @@
+<!--
+  Welcome API (public landing) policy.
+  The API service_url points at the Function base URL; this rewrites the root
+  request to the backend's /root operation so the APIM gateway root returns the
+  "Welcome to Azure Agents Security" message. No subscription key required.
+-->
+<policies>
+  <inbound>
+    <base />
+    <rewrite-uri template="/root" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

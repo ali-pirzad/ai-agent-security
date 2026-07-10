@@ -1,0 +1,45 @@
+# ---- Terraform ----
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.auto.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+tfplan
+*.tfplan
+
+# ---- Node.js / Azure Functions ----
+node_modules/
+local.settings.json
+dist/
+build/
+*.log
+.func/
+bin/
+obj/
+
+# ---- Secrets / environment ----
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.publishsettings
+azureauth.json
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/*.log
+
+# ---- Keep these (allow example var files so others can reproduce) ----
+!*.tfvars.example

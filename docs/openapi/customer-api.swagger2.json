@@ -1,0 +1,78 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "AAS Customer API",
+    "description": "Governed customer-data API for the AI Agents Security demo, fronted by Azure API Management. Import this Swagger 2.0 file when creating a Copilot Studio / Power Platform custom connector.",
+    "version": "1.0.0"
+  },
+  "host": "apim-aas-cus-egtyrm.azure-api.net",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": [],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "apimSubscriptionKey": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Ocp-Apim-Subscription-Key"
+    }
+  },
+  "security": [
+    {
+      "apimSubscriptionKey": []
+    }
+  ],
+  "paths": {
+    "/customer/{id}": {
+      "get": {
+        "operationId": "GetCustomerById",
+        "summary": "Get a customer record by id",
+        "description": "Returns a mock customer record including a risk score and recent transactions. Requires an APIM subscription key.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Customer identifier (1-64 alphanumeric or hyphen characters)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The customer record.",
+            "schema": {
+              "$ref": "#/definitions/Customer"
+            }
+          },
+          "400": { "description": "Invalid customer id (failed gateway validation)." },
+          "401": { "description": "Missing or invalid subscription key." },
+          "429": { "description": "Rate limit exceeded (20 calls / 60s)." }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Customer": {
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "riskScore": { "type": "integer", "format": "int32" },
+        "riskTier": { "type": "string" },
+        "transactions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Transaction" }
+        }
+      }
+    },
+    "Transaction": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "amount": { "type": "number", "format": "double" },
+        "currency": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" }
+      }
+    }
+  }
+}

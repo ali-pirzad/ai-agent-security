@@ -1,0 +1,39 @@
+<!--
+  Customer API governance policy (applied at API scope).
+  Enforced controls:
+   - Subscription key auth  : required at the API (subscription_required = true).
+   - Rate limiting          : 20 calls / 60s per subscription key.
+   - Request validation     : the {id} path parameter must be 1-64 alphanumerics/hyphens;
+                              anything else is rejected at the gateway (never reaches backend).
+   - Response hygiene       : strip backend fingerprinting headers.
+  All calls are proxied to the private Function App backend (service_url), reachable
+  only from inside the VNet via its private endpoint.
+-->
+<policies>
+  <inbound>
+    <base />
+    <rate-limit calls="20" renewal-period="60" />
+    <choose>
+      <when condition="@(!System.Text.RegularExpressions.Regex.IsMatch((string)context.Request.MatchedParameters[&quot;id&quot;] ?? &quot;&quot;, &quot;^[A-Za-z0-9-]{1,64}$&quot;))">
+        <return-response>
+          <set-status code="400" reason="Bad Request" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{ "error": "Invalid customer id. Expected 1-64 alphanumeric or hyphen characters." }</set-body>
+        </return-response>
+      </when>
+    </choose>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <set-header name="X-Powered-By" exists-action="delete" />
+    <set-header name="Server" exists-action="delete" />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

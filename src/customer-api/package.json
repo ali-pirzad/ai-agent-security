@@ -1,0 +1,12 @@
+{
+  "name": "aas-customer-api",
+  "version": "1.0.0",
+  "description": "Mock customer data API for the AI Agents Security demo. Exposes GET /customer/{id}.",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  }
+}
